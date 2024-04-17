@@ -2,8 +2,10 @@ CC = gcc
 SRCS = src/rootkitty-lib.c 
 OUT = rootkitty.so
 # add -s later for a stripped binary
+# add -fvisibility=hidden for hidden symbols
+# (perhaps use optimisation) -Os -> smaller code -funroll-loops -> longer code 
 CFLAGS = -fPIC -shared -lssl -ldl 
-DBG = $(CFLAGS) -Wall -g -O2
+DBG = $(CFLAGS) -Wall -Wextra -g -O2
 
 all:
 	@echo "Compiling rootkitty... >^..^<"
