@@ -89,6 +89,16 @@ int drop_privileges(uid_t original_uid, gid_t original_gid) {
     return 0;
 }
 ```
+## Bypassing LDD, LD_LINUX, UNHIDE the lazy way 
+hook execve:
+if path = path of ldd or whatever
+    save old uid 
+    decrypt strings
+    set uid to 0
+    rename ld.so.preload to .ld.so.preload
+    wait a lil bit
+    undo
+
 
 ## more ideas
 - anti debug
