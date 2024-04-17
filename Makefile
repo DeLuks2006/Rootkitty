@@ -1,6 +1,7 @@
 CC = gcc
 SRCS = src/rootkitty-lib.c 
-OUT = rootkitty.so 
+OUT = rootkitty.so
+# add -s later for a stripped binary
 CFLAGS = -fPIC -shared -lssl -ldl 
 DBG = $(CFLAGS) -Wall -g -O2
 
