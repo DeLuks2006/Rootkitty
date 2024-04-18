@@ -103,8 +103,7 @@ if path = path of ldd or whatever
 ## more ideas
 - anti debug
 - PAM backdoor 
-- hide own processes
-- persistence over systemd process
+- persistence over systemd service
 - reverse shell ipv4 and v6 
 - mini-shell interface from server so we can have custom commands
 - intercept common cryptographic functions
