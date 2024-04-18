@@ -105,5 +105,4 @@ if path = path of ldd or whatever
 - PAM backdoor 
 - persistence over systemd service
 - reverse shell ipv4 and v6 
-- mini-shell interface from server so we can have custom commands
 - intercept common cryptographic functions

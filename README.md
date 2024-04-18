@@ -14,9 +14,12 @@
 ## Features:
 - Hides files                                                   
 - Intercepts `SSL_write`
+- Questionable Anti-Debugging   (WIP)
+- PAM Backdoor for easy privesc (WIP)
+- Reverse Shell over SystemD service (WIP)
 
 ## Issues:
-- no known issues
+- Doesnt run on WSL
 
 ## Compiling:
 Seriously? If you can't even use a Makefile you shouldn't even be allowed to use this. :)
