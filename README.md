@@ -7,8 +7,8 @@
 ## **DISCLAIMER**
 > [!IMPORTANT]
 > This open-source tool is provided for educational and research purposes only. 
-> The creator, expressly prohibit the use of this tool by governments, threat actors, or individuals with malicious intent. 
-> The creator, disclaim any responsibility for any damages caused to systems by the use of this tool or for any malicious activities conducted using this tool in the wild. 
+> The creator, expressly prohibits the use of this tool by governments, threat actors, or individuals with malicious intent. 
+> The creator, disclaims any responsibility for any damages caused to systems by the use of this tool or for any malicious activities conducted using this tool in the wild. 
 > Users are solely responsible for their use of this tool and are expected to adhere to ethical and legal standards at all times. 
 > 
 > By using this Software you explicitly agree to these terms and conditions.
