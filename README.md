@@ -37,9 +37,10 @@ it will add a systemd service that will cause a Connect-Back shell to run at sys
 
 ## Issues:
 - Doesnt run on WSL
-- Missing Encryption of strings (kinda done, not really (stack-strings))
 - Makefile needs ELF modification script (remove unnecessary sections and etc.)
-- Not really a issue but "ld.so.preload write", "execve hook", "Anti-Debugging" isn't tested
+- `ld.so.preload` write, "execve hook", Anti-Debugging and PAM-Backdoor is not tested
+
+FYI: I intentionally didnt encrypt/hash the backdoor password.
 
 ## Compiling:
 Seriously? If you can't even use a Makefile you shouldn't even be allowed to use this. :)
