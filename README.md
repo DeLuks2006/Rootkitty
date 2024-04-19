@@ -16,12 +16,29 @@
 ## Features:
 - Hides files                                                   
 - Intercepts `SSL_write`
-- Questionable Anti-Debugging   (WIP)
-- PAM Backdoor for easy privesc (WIP)
-- Reverse Shell over SystemD service (WIP)
+- Questionable Anti-Debugging (WIP)
+- PAM Backdoor for *local privilege escalation (WIP)
+- Reverse-Shell over SystemD service (WIP)
+
+## Description
+Rootkitty is my first ever Linux User-Mode Rootkit written in C. 
+To use it you either have to add the path to the library to `/etc/ld.so.preload` 
+or export the `LD_PRELOAD` variable and let the rootkit plant itself automatically.
+
+After that it will try to plant the *PAM Backdoor* by prepending itself to `/etc/pam.d/sudo` 
+(hopefully) causing sudo to accept the added Backdoor-Password.
+
+Finally in every hooked function it will check if a debugger is present. And additionally
+it will attempt to evade `ldd` and `unhide` by renaming the `ld.so.preload` file to something else.
+
+### *For Future Update:*
+Rootkitty will try to determine if the machine its on runs on systemd, if that is the case 
+it will add a systemd service that will cause a Connect-Back shell to run at system startup.
 
 ## Issues:
 - Doesnt run on WSL
+- Missing Encryption of strings
+- Makefile needs ELF modification script (remove unnecessary sections and etc.)
 - Not really a issue but "ld.so.preload write" and "execve hook" isnt tested
 
 ## Compiling:
