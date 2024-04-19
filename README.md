@@ -16,7 +16,7 @@
 ## Features:
 - Hides files                                                   
 - Intercepts `SSL_write`
-- Questionable Anti-Debugging (WIP)
+- Questionable Anti-Debugging
 - PAM Backdoor for *local privilege escalation (WIP)
 - Reverse-Shell over SystemD service (WIP)
 
@@ -32,14 +32,14 @@ After that it will try to plant the *PAM Backdoor* by prepending itself to `/etc
 Finally in every hooked function it will check if a debugger is present. And additionally
 it will attempt to evade `ldd` and `unhide` by renaming the `ld.so.preload` file to something else.
 
-Rootkitty will try to determine if the machine its on runs on systemd, if that is the case 
+Rootkitty will try to determine, if the machine its on runs on systemd, if that is the case 
 it will add a systemd service that will cause a Connect-Back shell to run at system startup.
 
 ## Issues:
 - Doesnt run on WSL
 - Missing Encryption of strings
 - Makefile needs ELF modification script (remove unnecessary sections and etc.)
-- Not really a issue but "ld.so.preload write" and "execve hook" isnt tested
+- Not really a issue but "ld.so.preload write", "execve hook", "Anti-Debugging" isn't tested
 
 ## Compiling:
 Seriously? If you can't even use a Makefile you shouldn't even be allowed to use this. :)

