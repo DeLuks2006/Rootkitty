@@ -25,13 +25,13 @@ Rootkitty is my first ever Linux User-Mode Rootkit written in C.
 To use it you either have to add the path to the library to `/etc/ld.so.preload` 
 or export the `LD_PRELOAD` variable and let the rootkit plant itself automatically.
 
+### *For Future Update:*
 After that it will try to plant the *PAM Backdoor* by prepending itself to `/etc/pam.d/sudo` 
 (hopefully) causing sudo to accept the added Backdoor-Password.
 
 Finally in every hooked function it will check if a debugger is present. And additionally
 it will attempt to evade `ldd` and `unhide` by renaming the `ld.so.preload` file to something else.
 
-### *For Future Update:*
 Rootkitty will try to determine if the machine its on runs on systemd, if that is the case 
 it will add a systemd service that will cause a Connect-Back shell to run at system startup.
 
