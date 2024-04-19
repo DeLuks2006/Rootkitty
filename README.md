@@ -7,9 +7,11 @@
 ## **DISCLAIMER**
 > [!IMPORTANT]
 > This open-source tool is provided for educational and research purposes only. 
-> I, the creator, expressly prohibit the use of this tool by governments, threat actors, or individuals with malicious intent. 
-> I, the creator, disclaim any responsibility for any damages caused to systems by the use of this tool or for any malicious activities conducted using this tool in the wild. 
+> The creator, expressly prohibit the use of this tool by governments, threat actors, or individuals with malicious intent. 
+> The creator, disclaim any responsibility for any damages caused to systems by the use of this tool or for any malicious activities conducted using this tool in the wild. 
 > Users are solely responsible for their use of this tool and are expected to adhere to ethical and legal standards at all times. 
+> 
+> By using this Software you explicitly agree to these terms and conditions.
 
 ## Features:
 - Hides files                                                   
@@ -20,6 +22,7 @@
 
 ## Issues:
 - Doesnt run on WSL
+- Not really a issue but "ld.so.preload write" and "execve hook" isnt tested
 
 ## Compiling:
 Seriously? If you can't even use a Makefile you shouldn't even be allowed to use this. :)

