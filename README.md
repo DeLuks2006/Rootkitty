@@ -2,7 +2,7 @@
     <img src=assets/Rootkitty.png width=50%></img>
 </p>
 <h1 align=center>Rootkitty</h1>
-<p align=center>simple and detectable rootkit using LD_PRELOAD</p>
+<p align=center>Simple and Detectable User Mode Rootkit using LD_PRELOAD</p>
 
 ## **DISCLAIMER**
 > [!IMPORTANT]
