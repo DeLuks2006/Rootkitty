@@ -33,11 +33,10 @@ Rootkitty will try to determine, if the machine its on runs on systemd, if that 
 it will add a systemd service that will cause a Connect-Back shell to run at system startup.
 
 ## Issues:
-- Doesnt run on WSL
-- Makefile needs ELF modification script (remove unnecessary sections and etc.)
-- `ld.so.preload` write, "execve hook", Anti-Debugging and PAM-Backdoor is not tested
-
-**FYI:** I intentionally didnt encrypt/hash the backdoor password.
+where do I even start...
+- READDIR64 DOESNT GET EXECUTED FOR SOME STRANGE REASON
+- PAM BACKDOOR IS BROKEN
+- SELF PLANT INTO ld.so.preload IS BROKEN
 
 ## Contributing
 

