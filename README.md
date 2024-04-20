@@ -17,7 +17,7 @@
 - Hides files                                                   
 - Intercepts `SSL_write`
 - Questionable Anti-Debugging
-- PAM Backdoor for *local privilege escalation (WIP)
+- PAM Backdoor for *local privilege escalation*
 - Reverse-Shell over SystemD service (WIP)
 
 ## Description
@@ -37,7 +37,7 @@ it will add a systemd service that will cause a Connect-Back shell to run at sys
 - Makefile needs ELF modification script (remove unnecessary sections and etc.)
 - `ld.so.preload` write, "execve hook", Anti-Debugging and PAM-Backdoor is not tested
 
-FYI: I intentionally didnt encrypt/hash the backdoor password.
+**FYI:** I intentionally didnt encrypt/hash the backdoor password.
 
 ## Compiling:
 Seriously? If you can't even use a Makefile you shouldn't even be allowed to use this. :)
