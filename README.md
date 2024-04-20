@@ -39,5 +39,13 @@ it will add a systemd service that will cause a Connect-Back shell to run at sys
 
 **FYI:** I intentionally didnt encrypt/hash the backdoor password.
 
+## Contributing
+
+Before creating a pull request, please make sure to test the code locally to ensure that it functions as expected. This will help streamline the review process and ensure that the changes are in line with the project's goals.
+
+When submitting code changes, please keep the code simple and follow the existing coding style and conventions used in the project. This will make it easier for maintainers to review and merge your contributions.
+
+If you have any questions or need assistance with contributing, feel free to reach out to me via a Issue.
+
 ## Compiling:
-Seriously? If you can't even use a Makefile you shouldn't even be allowed to use this. :)
+Seriously, if you can't even use a Makefile you shouldn't even be allowed to use this. :)
