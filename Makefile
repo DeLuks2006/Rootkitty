@@ -1,7 +1,7 @@
 CC = gcc
 SRCS = src/rootkitty-lib.c 
 OUT = rootkitty.so
-CFLAGS = -lpam -fPIC -shared -lssl -ldl -fvisibility=hidden -s 
+CFLAGS = -lpam -fPIC -shared -lssl -ldl 
 DBG = $(CFLAGS) -Wall -Wextra -Wshadow -g -O2
 #default
 all:
