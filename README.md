@@ -33,8 +33,7 @@ Rootkitty will try to determine, if the machine its on runs on systemd, if that 
 it will add a systemd service that will cause a Connect-Back shell to run at system startup.
 
 ## Issues:
-where do I even start...
-- readdir64 hook doesnt work when compiled with glibc 2.35 for unknown reasons
+- Rootkit does not work when compiled on ubuntu 22 or any distro with glibc version 2.35.
 
 ## Contributing
 

