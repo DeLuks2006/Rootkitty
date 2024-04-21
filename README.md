@@ -34,7 +34,7 @@ it will add a systemd service that will cause a Connect-Back shell to run at sys
 
 ## Issues:
 where do I even start...
-- READDIR64 DOESNT GET EXECUTED FOR SOME STRANGE REASON
+- readdir64 hook doesnt work when compiled with glibc 2.35 for unknown reasons
 - PAM BACKDOOR IS BROKEN
 - SELF PLANT INTO ld.so.preload IS BROKEN
 

