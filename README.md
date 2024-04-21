@@ -23,7 +23,7 @@
 ## Description
 Rootkitty is my first ever Linux User-Mode Rootkit written in C. 
 To use it you either have to add the path to the library to `/etc/ld.so.preload` 
-or export the `LD_PRELOAD` variable and let the rootkit plant itself automatically.
+or export the `LD_PRELOAD` environment variable and restart various daemons. 
 
 Finally in every hooked function it will check if a debugger is present. And additionally
 it will attempt to evade `ldd` and `unhide` by renaming the `ld.so.preload` file to something else.
