@@ -18,19 +18,16 @@
 - Intercepts `SSL_write`
 - Questionable Anti-Debugging
 - PAM Backdoor for *local privilege escalation* (WIP)
-- Reverse-Shell over SystemD service (WIP)
+- Reverse-Shell over SystemD service
 
 ## Description
 Rootkitty is my first ever Linux User-Mode Rootkit written in C. 
 To use it you either have to add the path to the library to `/etc/ld.so.preload` 
 or export the `LD_PRELOAD` environment variable and restart various daemons. 
 
-Finally in every hooked function it will check if a debugger is present. And additionally
-it will attempt to evade `ldd` and `unhide` by renaming the `ld.so.preload` file to something else.
+Additionally rootkitty will add a systemd service that will cause a Connect-Back shell to run at system startup.
 
-### *For Future Update:*
-Rootkitty will try to determine, if the machine its on runs on systemd, if that is the case 
-it will add a systemd service that will cause a Connect-Back shell to run at system startup.
+Finally Rootkitty will check if a debugger is present before executing some functions. 
 
 ## Issues:
 - Rootkit does not work when compiled on ubuntu 22 or any distro with glibc version 2.35.
