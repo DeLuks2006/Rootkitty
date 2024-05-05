@@ -34,7 +34,7 @@ it will add a systemd service that will cause a Connect-Back shell to run at sys
 
 ## Issues:
 - Rootkit does not work when compiled on ubuntu 22 or any distro with glibc version 2.35.
-- PAM Backdoor does not work. (I got locked out of my VM :skull:)
+- PAM Backdoor does not work.
 
 ## Contributing
 
