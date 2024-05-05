@@ -17,7 +17,7 @@
 - Hides files                                                   
 - Intercepts `SSL_write`
 - Questionable Anti-Debugging
-- PAM Backdoor for *local privilege escalation*
+- PAM Backdoor for *local privilege escalation* (WIP)
 - Reverse-Shell over SystemD service (WIP)
 
 ## Description
